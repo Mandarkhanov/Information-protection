@@ -1,0 +1,6 @@
+# Compiled Go files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
