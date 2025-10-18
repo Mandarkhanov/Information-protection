@@ -68,7 +68,6 @@ type cipherWriter struct {
 	closed bool
 }
 
-// Write накапливает данные в блок и шифрует, когда блок полон.
 func (cw *cipherWriter) Write(p []byte) (n int, err error) {
 	if cw.closed {
 		return 0, errors.New("write to closed cipherWriter")
@@ -76,24 +75,24 @@ func (cw *cipherWriter) Write(p []byte) (n int, err error) {
 
 	totalWritten := 0
 	for len(p) > 0 {
-		needed := BlockSize - len(cw.block)
-		if needed == 0 { // Блок уже полон, шифруем его
-			encrypted := Encrypt([BlockSize]byte(cw.block), cw.key)
-			if _, err := cw.w.Write(encrypted[:]); err != nil {
-				return totalWritten, err
-			}
-			cw.block = cw.block[:0]
-			continue
-		}
+		toFill := BlockSize - len(cw.block)
 
-		toCopy := needed
-		if len(p) < needed {
+		toCopy := toFill
+		if len(p) < toFill {
 			toCopy = len(p)
 		}
 
 		cw.block = append(cw.block, p[:toCopy]...)
 		p = p[toCopy:]
 		totalWritten += toCopy
+
+		if len(cw.block) == BlockSize {
+			encrypted := Encrypt([BlockSize]byte(cw.block), cw.key)
+			if _, err := cw.w.Write(encrypted[:]); err != nil {
+				return totalWritten, err
+			}
+			cw.block = cw.block[:0]
+		}
 	}
 	return totalWritten, nil
 }
